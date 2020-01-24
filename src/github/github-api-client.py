@@ -24,8 +24,6 @@ token = 'c8b963ebce12abd042c91315e5a694cc1e0482c9'
 
 repos_url = 'https://api.github.com/repos'
 
-gh_session = requests.Session()
-gh_session.auth = (username, token)
 
 
 def importCommits(user, project):
@@ -36,7 +34,7 @@ def importCommits(user, project):
     
     url = '' + repos_url + '/' + user + '/' + project + '/commits'
     query = {'username': username, 'token' : token}
-    r = requests.get(url, auth=gh_session.auth, params=query)
+    r = requests.get(url, params=query)
     commitsDict = r.json()
     print(commitsDict)
     # print the repo names
