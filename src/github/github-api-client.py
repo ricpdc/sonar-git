@@ -59,7 +59,7 @@ def main():
     # importCommits('ricpdc', 'archirev')
     importCommits('monicahq', 'monica')
     
-    print('\End of program!')
+    print('\n\nEnd of program!')
 
     
 main()
