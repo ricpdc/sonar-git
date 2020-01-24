@@ -22,7 +22,7 @@ COLLECTION_COMMITS = 'commits'
 username = 'ricpdc'
 token = 'c8b963ebce12abd042c91315e5a694cc1e0482c9'
 
-repos_url = 'https://api.github.com/repos'
+repos_url = 'https://api.github.com/repos/{}/{}/commits?page={}&per_page=100'
 
 
 
@@ -32,15 +32,15 @@ def importCommits(user, project):
     collCommits= connection[DB_NAME][COLLECTION_COMMITS]
     collCommits.drop();
     
-    url = '' + repos_url + '/' + user + '/' + project + '/commits'
-    query = {'username': username, 'token' : token}
+    url = repos_url.format(user, project, 1)
+    query = {'username': username, 'token' : token, 'since' : '2010-01-01T00:00:00Z'}
     r = requests.get(url, params=query)
     commitsDict = r.json()
-    print(commitsDict)
+    #print(commitsDict).encode('utf-8')
     # print the repo names
     collCommits.insert_many(commitsDict)
-#     for repo in commitsDict:
-#         print (repo)
+    #for repo in commitsDict:
+        #print (repo)
 
 
 def main():
