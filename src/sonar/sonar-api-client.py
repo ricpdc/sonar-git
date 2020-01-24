@@ -17,6 +17,7 @@ MONGODB_PORT = 27017
 DB_NAME = 'sonar-git'
 COLLECTION_PROJECTS = 'projects'
 COLLECTION_METRICS = 'measures'
+COLLECTION_ISSUES = 'issues'
 
 
 def measuresComponentTree():
@@ -77,7 +78,7 @@ def measuresComponentHistory(componentName):
     
    
     url = 'https://sonarcloud.io/api/measures/search_history'
-    query = {'component': ''+componentName, 'p': '1', 'ps': '1000', 'metrics': ','.join(getAllMetricsKeys()), 'from': '2017-01-01T00:00:00+0000', 'to': '2021-01-01T00:00:00+0000'}
+    query = {'component': ''+componentName, 'p': '1', 'ps': '1000', 'metrics': ','.join(getAllMetricsKeys()), 'from': '2010-01-01T00:00:00+0000', 'to': '2021-01-01T00:00:00+0000'}
     r = requests.get(url, params=query)
     measures_dict = r.json()
     print(measures_dict)
@@ -88,6 +89,27 @@ def measuresComponentHistory(componentName):
         collMetrics.insert_one(measure)
         #print(measure)
 
+def issuesComponent(componentName):
+    
+    issues_dict = measuresComponent();
+    projectId = issues_dict['component'].get('id');
+    
+    connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
+    collIssues = connection[DB_NAME][COLLECTION_ISSUES]
+    collIssues.drop();
+    
+   
+    url = 'https://sonarcloud.io/api/issues/search'
+    query = {'componentKeys': ''+componentName, 'p': '1', 'ps': '500'}
+    r = requests.get(url, params=query)
+    issues_dict = r.json()
+    print(issues_dict)
+        
+    #insert measures by adding project id    
+    for issue in issues_dict['issues']:
+        issue['projectId'] = projectId
+        collIssues.insert_one(issue)
+        #print(issue)
 
 
 def getAllMetricsKeys():
@@ -113,6 +135,7 @@ def getAllMetricsKeys():
 def main ():
     #getAllMetricsKeys()
     measuresComponentHistory('monica')
+    issuesComponent('monica')
 
 
 
