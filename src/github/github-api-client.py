@@ -9,6 +9,11 @@ import json
 import pymongo
 from pymongo import MongoClient
 from objdict import ObjDict
+import configparser
+
+config = configparser.ConfigParser()
+config.read('..\..\ConfigFile.ini')
+
 
 MONGODB_HOST = 'localhost'
 MONGODB_PORT = 27017
@@ -19,8 +24,8 @@ COLLECTION_COMMITS = 'commits'
 ####
 # inputs
 ####
-username = 'ricpdc'
-token = 'c8b963ebce12abd042c91315e5a694cc1e0482c9'
+username = config['github.com']['user']
+token = config['github.com']['token']
 
 repos_url = 'https://api.github.com/repos/{}/{}/commits?page={}&per_page=100'
 
@@ -53,6 +58,7 @@ def importCommits(user, project):
 def main():
     # importCommits('ricpdc', 'archirev')
     importCommits('monicahq', 'monica')
+    
     print('\End of program!')
 
     
