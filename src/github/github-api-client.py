@@ -25,27 +25,35 @@ token = 'c8b963ebce12abd042c91315e5a694cc1e0482c9'
 repos_url = 'https://api.github.com/repos/{}/{}/commits?page={}&per_page=100'
 
 
-
 def importCommits(user, project):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collRepos = connection[DB_NAME][COLLECTION_REPOS]
-    collCommits= connection[DB_NAME][COLLECTION_COMMITS]
+    collCommits = connection[DB_NAME][COLLECTION_COMMITS]
     collCommits.drop();
     
-    url = repos_url.format(user, project, 1)
-    query = {'username': username, 'token' : token, 'since' : '2010-01-01T00:00:00Z'}
-    r = requests.get(url, params=query)
-    commitsDict = r.json()
-    #print(commitsDict).encode('utf-8')
-    # print the repo names
-    collCommits.insert_many(commitsDict)
-    #for repo in commitsDict:
-        #print (repo)
+    hasMorePages = True
+    page = 1;
+    while hasMorePages == True:
+        url = repos_url.format(user, project, page)
+        page += 1
+        query = {'username': username, 'token' : token, 'since' : '2010-01-01T00:00:00Z'}
+        r = requests.get(url, params=query)
+        commits_dict = r.json()
+        # print the commits
+        # print(str(commits_dict).encode('utf-8'))
+        
+        if len(commits_dict) > 0: 
+            collCommits.insert_many(commits_dict)
+            for commit in commits_dict:
+                print (str(commit).encode('utf-8'))
+        else:
+            hasMorePages = False
 
 
 def main():
-    #importCommits('ricpdc', 'archirev')
+    # importCommits('ricpdc', 'archirev')
     importCommits('monicahq', 'monica')
+    print('\End of program!')
 
     
 main()
