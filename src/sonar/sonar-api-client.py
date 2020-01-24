@@ -21,7 +21,7 @@ COLLECTION_METRICS = 'measures'
 
 def measuresComponentTree():
     url = 'https://sonarcloud.io/api/measures/component_tree'
-    query = {'component': 'keyJabref4.2', 'metricKeys': 'sqale_index', 'ps': 100, 'p': 1}
+    query = {'component': 'monica', 'metricKeys': 'sqale_index', 'ps': 100, 'p': 1}
     r = requests.get(url, params=query)
     measures_dict = r.json()
     print(measures_dict)
@@ -39,7 +39,7 @@ def measuresComponent():
     collProject.drop();
     
     url = 'https://sonarcloud.io/api/measures/component'
-    query = {'component': 'ricpdc_ArchiRev', 'metricKeys': 'ncloc,complexity,violations'}
+    query = {'component': 'monica', 'metricKeys': 'ncloc,complexity,violations'}
     r = requests.get(url, params=query)
     measures_dict = r.json()
     print(measures_dict)
@@ -66,7 +66,7 @@ def measuresComponent():
     
 keys = 'new_technical_debt,blocker_violations,bugs,classes,code_smells,cognitive_complexity,comment_lines,comment_lines_data,comment_lines_density,class_complexity,file_complexity,function_complexity,complexity_in_classes,complexity_in_functions,branch_coverage,new_branch_coverage,conditions_to_cover,new_conditions_to_cover,confirmed_issues,coverage,new_coverage,critical_violations,complexity,last_commit_date,development_cost,new_development_cost,directories,duplicated_blocks,new_duplicated_blocks'    
     
-def measuresComponentHistory():
+def measuresComponentHistory(componentName):
     
     measures_dict = measuresComponent();
     projectId = measures_dict['component'].get('id');
@@ -77,7 +77,7 @@ def measuresComponentHistory():
     
    
     url = 'https://sonarcloud.io/api/measures/search_history'
-    query = {'component': 'ricpdc_ArchiRev', 'p': '1', 'ps': '1000', 'metrics': ','.join(getAllMetricsKeys()), 'from': '2017-01-01T00:00:00+0000', 'to': '2021-01-01T00:00:00+0000'}
+    query = {'component': ''+componentName, 'p': '1', 'ps': '1000', 'metrics': ','.join(getAllMetricsKeys()), 'from': '2017-01-01T00:00:00+0000', 'to': '2021-01-01T00:00:00+0000'}
     r = requests.get(url, params=query)
     measures_dict = r.json()
     print(measures_dict)
@@ -112,7 +112,7 @@ def getAllMetricsKeys():
 
 def main ():
     #getAllMetricsKeys()
-    measuresComponentHistory()
+    measuresComponentHistory('monica')
 
 
 

@@ -20,9 +20,9 @@ COLLECTION_COMMITS = 'commits'
 # inputs
 ####
 username = 'ricpdc'
-token = '3347e6495fb0fa8a1facf8fcc67d548578e0649d'
+token = 'c8b963ebce12abd042c91315e5a694cc1e0482c9'
 
-repos_url = 'https://api.github.com/user/repos'
+repos_url = 'https://api.github.com/repos'
 
 gh_session = requests.Session()
 gh_session.auth = (username, token)
@@ -32,9 +32,10 @@ def importCommits(user, project):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collRepos = connection[DB_NAME][COLLECTION_REPOS]
     collCommits= connection[DB_NAME][COLLECTION_COMMITS]
+    collCommits.drop();
     
-    url = 'https://api.github.com/repos/' + user + '/' + project + '/commits'
-    query = {'username': 'ricpdc', 'token' : '3347e6495fb0fa8a1facf8fcc67d548578e0649d'}
+    url = '' + repos_url + '/' + user + '/' + project + '/commits'
+    query = {'username': username, 'token' : token}
     r = requests.get(url, auth=gh_session.auth, params=query)
     commitsDict = r.json()
     print(commitsDict)
@@ -45,7 +46,8 @@ def importCommits(user, project):
 
 
 def main():
-    importCommits('ricpdc', 'archirev')
+    #importCommits('ricpdc', 'archirev')
+    importCommits('monicahq', 'monica')
 
     
 main()
