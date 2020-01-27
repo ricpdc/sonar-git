@@ -68,10 +68,6 @@ def measuresComponent():
 keys = 'new_technical_debt,blocker_violations,bugs,classes,code_smells,cognitive_complexity,comment_lines,comment_lines_data,comment_lines_density,class_complexity,file_complexity,function_complexity,complexity_in_classes,complexity_in_functions,branch_coverage,new_branch_coverage,conditions_to_cover,new_conditions_to_cover,confirmed_issues,coverage,new_coverage,critical_violations,complexity,last_commit_date,development_cost,new_development_cost,directories,duplicated_blocks,new_duplicated_blocks'    
     
 def measuresComponentHistory(componentName):
-    
-    measures_dict = measuresComponent();
-    projectId = measures_dict['component'].get('id');
-    
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collMetrics = connection[DB_NAME][COLLECTION_METRICS]
     collMetrics.drop();
@@ -85,15 +81,11 @@ def measuresComponentHistory(componentName):
         
     #insert measures by adding project id    
     for measure in measures_dict['measures']:
-        measure['projectId'] = projectId
+        measure['project'] = componentName
         collMetrics.insert_one(measure)
         #print(measure)
 
 def issuesComponent(componentName):
-    
-    issues_dict = measuresComponent();
-    projectId = issues_dict['component'].get('id');
-    
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collIssues = connection[DB_NAME][COLLECTION_ISSUES]
     collIssues.drop();
@@ -107,7 +99,7 @@ def issuesComponent(componentName):
         
     #insert measures by adding project id    
     for issue in issues_dict['issues']:
-        issue['projectId'] = projectId
+        issue['projectId'] = componentName
         collIssues.insert_one(issue)
         #print(issue)
 
@@ -131,9 +123,30 @@ def getAllMetricsKeys():
     print(','.join(keys))
     return keys
   
+  
+  
+def getProject(projectName):
+    connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
+    collProject = connection[DB_NAME][COLLECTION_PROJECTS]
+    collProject.drop();
+    
+    url = 'https://sonarcloud.io/api/projects/search'
+    query = {'projects': projectName}
+    r = requests.get(url, params=query)
+    project_dict = r.json()
+    print(project_dict)
+    
+    project = project_dict['components'][0]   
+    collProject.insert_one(project)
+    print(project);
+        
+    return project
+
+projectId=1
 
 def main ():
     #getAllMetricsKeys()
+    #project=getProject('monica')
     measuresComponentHistory('monica')
     issuesComponent('monica')
 
