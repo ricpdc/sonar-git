@@ -18,6 +18,7 @@ DB_NAME = 'sonar-git'
 COLLECTION_PROJECTS = 'projects'
 COLLECTION_METRICS = 'measures'
 COLLECTION_ISSUES = 'issues'
+COLLECTION_PROJECTS_ANALYSES = "analyses"
 
 
 def measuresComponentTree():
@@ -142,11 +143,25 @@ def getProject(projectName):
         
     return project
 
-projectId=1
+def getProjectAnalyses(projectName):
+    connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
+    collProjectAnalyses = connection[DB_NAME][COLLECTION_PROJECTS_ANALYSES]
+    collProjectAnalyses.drop();
+    
+    url = 'https://sonarcloud.io/api/project_analyses/search'
+    query = {'project': projectName}
+    r = requests.get(url, params=query)
+    project_dict = r.json()
+    print(project_dict)
+    
+    for analysis in project_dict['analyses']:
+        analysis['projectId'] = projectName
+        collProjectAnalyses.insert_one(analysis)   
+
 
 def main ():
     #getAllMetricsKeys()
-    #project=getProject('monica')
+    getProjectAnalyses('monica')
     measuresComponentHistory('monica')
     issuesComponent('monica')
 
