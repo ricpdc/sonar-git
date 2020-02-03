@@ -23,7 +23,7 @@ COLLECTION_ISSUES = 'issues'
 COLLECTION_PROJECTS_ANALYSES = "analyses"
 
 
-def commitsToCSV(csvWriter, projectId, version, date1, date2, lastdate):
+def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collCommits = connection[DB_NAME][COLLECTION_COMMITS]
     collMeasures = connection[DB_NAME][COLLECTION_METRICS]
@@ -68,7 +68,7 @@ def commitsToCSV(csvWriter, projectId, version, date1, date2, lastdate):
 #         print(str(commit).encode('utf-8'))
 
 
-def preprocessGit(projectId):
+def preprocess(projectId):
     analysisDates = getAnalysisDates(projectId);
     # print(analysisDates)
     
@@ -84,12 +84,12 @@ def preprocessGit(projectId):
             date2 = date1;
             date1 = analysisDates[i]['date']
             version = analysisDates[i - 1]['events'][0]['name']
-            commitsToCSV(csvWriter, projectId, version, date1, date2, lastdate)
+            dataToCsv(csvWriter, projectId, version, date1, date2, lastdate)
         
         version = analysisDates[len(analysisDates) - 1]['events'][0]['name']
         date2 = date1
         date1 = (datetime.datetime.now() - relativedelta(years=10)).isoformat()
-        commitsToCSV(csvWriter, projectId, version, date1, date2, lastdate)
+        dataToCsv(csvWriter, projectId, version, date1, date2, lastdate)
     
 
 def getAnalysisDates(projectId):
@@ -104,7 +104,7 @@ def getAnalysisDates(projectId):
 
 
 def main():
-    preprocessGit('monica')
+    preprocess('monica')
 
 
 main()
