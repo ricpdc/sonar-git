@@ -12,6 +12,9 @@ from pymongo import MongoClient
 from objdict import ObjDict
 import datetime
 from dateutil.relativedelta import relativedelta
+import sys
+sys.path.append("../sonar")
+from sonar_api_client import getAllMetricsKeys 
 
 MONGODB_HOST = 'localhost'
 MONGODB_PORT = 27017
@@ -23,7 +26,7 @@ COLLECTION_ISSUES = 'issues'
 COLLECTION_PROJECTS_ANALYSES = "analyses"
 
 
-def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate):
+def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collCommits = connection[DB_NAME][COLLECTION_COMMITS]
     collMeasures = connection[DB_NAME][COLLECTION_METRICS]
@@ -60,9 +63,23 @@ def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate):
         for f in list(c['files']):
             files.add(f['filename'])
 
-    collMeasures.find({'project' : projectId})
     
-    csvWriter.writerow([projectId, version, date1, date2, len(commitsVersion), len(commitsAccumulated), len(commiters), str(harmonicMeanCommiters), changes, additions, deletions, len(files)])
+    csvRow = [projectId, version, date1, date2, len(commitsVersion), len(commitsAccumulated), len(commiters), str(harmonicMeanCommiters), changes, additions, deletions, len(files)]
+    
+    for metric in metrics:
+        measures = collMeasures.find({'project' : projectId, 'metric': metric }, {'metric': 1, '_id' : 0, 'history': {'$elemMatch': {'date': date2} }})
+        value = 0;
+        if 'value' in measures[0]['history'][0]:
+            value = measures[0]['history'][0]['value']
+        name = measures[0]['metric']
+        print(''+str(version)+' - '+ str(date2) + ' - '+name+': ' + str(value))
+        csvRow.append(value)
+    
+    
+    
+    
+    
+    csvWriter.writerow(csvRow)
     
 #     for commit in commitsVersion:
 #         print(str(commit).encode('utf-8'))
@@ -71,10 +88,15 @@ def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate):
 def preprocess(projectId):
     analysisDates = getAnalysisDates(projectId);
     # print(analysisDates)
+    metrics = getAllMetricsKeys()
     
     with open('sonar-git.csv', mode='w', newline='') as csvFile:
         csvWriter = csv.writer(csvFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        csvWriter.writerow(['project', 'version', 'from', 'to', 'commits', 'accumulated_commits', 'committers', 'commiters_weigth', 'changes', 'additions', 'deletions', 'changed_files'])
+        headerFields = ['project', 'version', 'from', 'to', 'commits', 'accumulated_commits', 'committers', 'committers_weigth', 'changes', 'additions', 'deletions', 'changed_files']
+        for m in metrics:
+            headerFields.append(m)
+                    
+        csvWriter.writerow(headerFields)
     
         date1 = analysisDates[0]['date']
         lastdate = analysisDates[len(analysisDates) - 1]['date']
@@ -84,12 +106,12 @@ def preprocess(projectId):
             date2 = date1;
             date1 = analysisDates[i]['date']
             version = analysisDates[i - 1]['events'][0]['name']
-            dataToCsv(csvWriter, projectId, version, date1, date2, lastdate)
+            dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics)
         
         version = analysisDates[len(analysisDates) - 1]['events'][0]['name']
         date2 = date1
         date1 = (datetime.datetime.now() - relativedelta(years=10)).isoformat()
-        dataToCsv(csvWriter, projectId, version, date1, date2, lastdate)
+        dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics)
     
 
 def getAnalysisDates(projectId):

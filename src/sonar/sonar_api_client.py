@@ -112,7 +112,7 @@ def getAllMetricsKeys():
     metrics_dict = r.json()
     print(metrics_dict)
     keys = []
-    validTypes = ['INT', 'FLOAT', 'PERCENT', 'BOOL', 'MILLISEC', 'DATA', 'LEVEL', 'DISTRIB', 'RATING', 'WORK_DUR']
+    validTypes = ['INT', 'FLOAT', 'PERCENT', 'BOOL', 'MILLISEC', 'LEVEL', 'DISTRIB', 'RATING', 'WORK_DUR']
     for metric in metrics_dict['metrics']:
         print(metric)
         key = metric['key']
