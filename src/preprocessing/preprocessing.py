@@ -23,9 +23,11 @@ COLLECTION_ISSUES = 'issues'
 COLLECTION_PROJECTS_ANALYSES = "analyses"
 
 
-def commitsToCSV(csvWriter, version, date1, date2, lastdate):
+def commitsToCSV(csvWriter, projectId, version, date1, date2, lastdate):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collCommits = connection[DB_NAME][COLLECTION_COMMITS]
+    collMeasures = connection[DB_NAME][COLLECTION_METRICS]
+    
     # print('> {} and <= {} : {}'.format(date1, date2, version))
     commitsVersion = collCommits.find({'commit.committer.date':{'$gt':date1, '$lte':date2}})
     commitsVersion = list(commitsVersion)
@@ -41,28 +43,38 @@ def commitsToCSV(csvWriter, version, date1, date2, lastdate):
     
     percentageCommiters = []
     for c in commiters:
-        percentageCommiters.append(c['count']/len(commitsVersion))
+        percentageCommiters.append(c['count'] / len(commitsVersion))
     harmonicMeanCommiters = stats.harmonic_mean(percentageCommiters)
     
-    print(len(commiters))
-    print(str(commiters).encode('utf-8'))
+#     print(len(commiters))
+#     print(str(commiters).encode('utf-8'))
     
+    changes = 0
+    additions = 0
+    deletions = 0
+    files = set([])
+    for c in commitsVersion:
+        changes += c['stats']['total']
+        additions += c['stats']['additions']
+        deletions += c['stats']['deletions']
+        for f in list(c['files']):
+            files.add(f['filename'])
+
+    collMeasures.find({'project' : projectId})
     
-    
-    csvWriter.writerow([version, date1, date2, len(commitsVersion), len(commitsAccumulated), len(commiters), str(harmonicMeanCommiters)])
+    csvWriter.writerow([projectId, version, date1, date2, len(commitsVersion), len(commitsAccumulated), len(commiters), str(harmonicMeanCommiters), changes, additions, deletions, len(files)])
     
 #     for commit in commitsVersion:
 #         print(str(commit).encode('utf-8'))
 
 
-def preprocessGit():
-    analysisDates = getAnalysisDates();
-    #print(analysisDates)
+def preprocessGit(projectId):
+    analysisDates = getAnalysisDates(projectId);
+    # print(analysisDates)
     
     with open('sonar-git.csv', mode='w', newline='') as csvFile:
-        csvWriter = csv.writer(csvFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL )
-        csvWriter.writerow(['version', 'from', 'to', 'commits', 'accumulated_commits', 'committers', 'commiters_weigth'])
-    
+        csvWriter = csv.writer(csvFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csvWriter.writerow(['project', 'version', 'from', 'to', 'commits', 'accumulated_commits', 'committers', 'commiters_weigth', 'changes', 'additions', 'deletions', 'changed_files'])
     
         date1 = analysisDates[0]['date']
         lastdate = analysisDates[len(analysisDates) - 1]['date']
@@ -72,19 +84,19 @@ def preprocessGit():
             date2 = date1;
             date1 = analysisDates[i]['date']
             version = analysisDates[i - 1]['events'][0]['name']
-            commitsToCSV(csvWriter, version, date1, date2, lastdate)
+            commitsToCSV(csvWriter, projectId, version, date1, date2, lastdate)
         
         version = analysisDates[len(analysisDates) - 1]['events'][0]['name']
         date2 = date1
         date1 = (datetime.datetime.now() - relativedelta(years=10)).isoformat()
-        commitsToCSV(csvWriter, version, date1, date2, lastdate)
+        commitsToCSV(csvWriter, projectId, version, date1, date2, lastdate)
     
 
-def getAnalysisDates():
+def getAnalysisDates(projectId):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collAnalyses = connection[DB_NAME][COLLECTION_PROJECTS_ANALYSES]
      
-    analysisDates = collAnalyses.find({"events.category": "VERSION"}, {"_id":0, "date": 1, "events.name": 1})
+    analysisDates = collAnalyses.find({"events.category": "VERSION", "projectId": projectId}, {"_id":0, "date": 1, "events.name": 1})
 #     print(list(analysisDates))
 #     for a in analysisDates:
 #         print(a)
@@ -92,7 +104,7 @@ def getAnalysisDates():
 
 
 def main():
-    preprocessGit()
+    preprocessGit('monica')
 
 
 main()
