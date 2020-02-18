@@ -37,8 +37,6 @@ def measuresComponent():
     collProject = connection[DB_NAME][COLLECTION_PROJECTS]
     collMetrics = connection[DB_NAME][COLLECTION_METRICS]
     
-    collMetrics.drop();
-    collProject.drop();
     
     url = 'https://sonarcloud.io/api/measures/component'
     query = {'component': 'monica', 'metricKeys': 'ncloc,complexity,violations'}
@@ -71,7 +69,6 @@ keys = 'new_technical_debt,blocker_violations,bugs,classes,code_smells,cognitive
 def measuresComponentHistory(componentName):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collMetrics = connection[DB_NAME][COLLECTION_METRICS]
-    collMetrics.drop();
     
    
     url = 'https://sonarcloud.io/api/measures/search_history'
@@ -82,14 +79,13 @@ def measuresComponentHistory(componentName):
         
     #insert measures by adding project id    
     for measure in measures_dict['measures']:
-        measure['project'] = componentName
+        measure['projectId'] = componentName
         collMetrics.insert_one(measure)
         #print(measure)
 
 def issuesComponent(componentName):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collIssues = connection[DB_NAME][COLLECTION_ISSUES]
-    collIssues.drop();
     
    
     url = 'https://sonarcloud.io/api/issues/search'
@@ -129,7 +125,6 @@ def getAllMetricsKeys():
 def getProject(projectName):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collProject = connection[DB_NAME][COLLECTION_PROJECTS]
-    collProject.drop();
     
     url = 'https://sonarcloud.io/api/projects/search'
     query = {'projects': projectName}
@@ -146,7 +141,6 @@ def getProject(projectName):
 def getProjectAnalyses(projectName):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collProjectAnalyses = connection[DB_NAME][COLLECTION_PROJECTS_ANALYSES]
-    collProjectAnalyses.drop();
     
     url = 'https://sonarcloud.io/api/project_analyses/search'
     query = {'project': projectName}
@@ -161,9 +155,23 @@ def getProjectAnalyses(projectName):
 
 def main ():
     #getAllMetricsKeys()
-    getProjectAnalyses('monica')
-    measuresComponentHistory('monica')
-    issuesComponent('monica')
+    sonarProjects = ['monica', 'simgrid_simgrid']
+    
+    
+    connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
+    collProjectAnalyses = connection[DB_NAME][COLLECTION_PROJECTS_ANALYSES]
+    collProjectAnalyses.drop();
+    collProject = connection[DB_NAME][COLLECTION_PROJECTS]
+    collProject.drop();
+    collMetrics = connection[DB_NAME][COLLECTION_METRICS]
+    collMetrics.drop();
+    collIssues = connection[DB_NAME][COLLECTION_ISSUES]
+    collIssues.drop();
+    
+    for project in sonarProjects:
+        getProjectAnalyses(project)
+        measuresComponentHistory(project)
+        issuesComponent(project)
 
 
 

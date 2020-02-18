@@ -32,14 +32,14 @@ def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics):
     collMeasures = connection[DB_NAME][COLLECTION_METRICS]
     
     # print('> {} and <= {} : {}'.format(date1, date2, version))
-    commitsVersion = collCommits.find({'commit.committer.date':{'$gt':date1, '$lte':date2}})
+    commitsVersion = collCommits.find({"projectId": projectId, 'commit.committer.date':{'$gt':date1, '$lte':date2}})
     commitsVersion = list(commitsVersion)
-    commitsAccumulated = collCommits.find({'commit.committer.date':{'$gt':lastdate, '$lt':date2}})
+    commitsAccumulated = collCommits.find({"projectId": projectId, 'commit.committer.date':{'$gt':lastdate, '$lt':date2}})
     commitsAccumulated = list(commitsAccumulated)
     # print('version: {}, accumulated: {}'.format(len(list(commitsVersion)), len(list(commitsAccumulated))))
     
     pipeline = [
-    {"$match":  {'commit.committer.date': {'$gt':date1, '$lte':date2}}},
+    {"$match":  {"projectId": projectId, 'commit.committer.date': {'$gt':date1, '$lte':date2}}},
     {"$group": { '_id': "$commit.author.name", 'count': { '$sum': 1 } } }]
     commiters = collCommits.aggregate(pipeline)
     commiters = list(commiters);

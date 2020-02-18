@@ -39,8 +39,6 @@ def importCommits(user, project):
     collRepos = connection[DB_NAME][COLLECTION_REPOS]
     collCommits = connection[DB_NAME][COLLECTION_COMMITS]
     collCommitsInfo = connection[DB_NAME][COLLECTION_COMMITS_INFO]
-    collCommits.drop();
-    collCommitsInfo.drop();
     
     hasMorePages = True
     page = 1;
@@ -66,6 +64,7 @@ def importCommits(user, project):
                                
                 commit['stats'] = commit_info['stats']
                 commit['files'] = commit_info['files']
+                commit['projectId'] = project;
                 print(str(commit).encode('utf-8'))
                 collCommits.insert_one(commit)
                 #print (str(commit).encode('utf-8'))
@@ -76,7 +75,18 @@ def importCommits(user, project):
 
 def main():
     # importCommits('ricpdc', 'archirev')
-    importCommits('monicahq', 'monica')
+    githubProjects = [['monicahq', 'monica'], ['simgrid', 'simgrid']]
+    
+    connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
+    collRepos = connection[DB_NAME][COLLECTION_REPOS]
+    collCommits = connection[DB_NAME][COLLECTION_COMMITS]
+    collCommitsInfo = connection[DB_NAME][COLLECTION_COMMITS_INFO]
+    collRepos.drop();
+    collCommits.drop();
+    collCommitsInfo.drop();
+    
+    for project in githubProjects:
+        importCommits(project[0], project[1])
     
     print('\n\nEnd of program!')
 
