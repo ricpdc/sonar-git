@@ -106,18 +106,18 @@ def getAllMetricsKeys():
     query = {'ps': '500'}
     r = requests.get(url, params=query)
     metrics_dict = r.json()
-    print(metrics_dict)
+    #print(metrics_dict)
     keys = []
     validTypes = ['INT', 'FLOAT', 'PERCENT', 'BOOL', 'MILLISEC', 'LEVEL', 'DISTRIB', 'RATING', 'WORK_DUR']
     for metric in metrics_dict['metrics']:
-        print(metric)
+        #print(metric)
         key = metric['key']
         metricType = metric['type']
         if metricType in validTypes :
             keys.append(key)
     res = [ sub['key'] for sub in metrics_dict['metrics'] ] 
-    print(keys)
-    print(','.join(keys))
+    #print(keys)
+    #print(','.join(keys))
     return keys
   
   
@@ -155,8 +155,7 @@ def getProjectAnalyses(projectName):
 
 def main ():
     #getAllMetricsKeys()
-    sonarProjects = ['monica', 'simgrid_simgrid']
-    
+    sonarProjects = ['monica', 'simgrid_simgrid', 'org.sonarsource.sonarqube:sonarqube', 'JMeter', 'org.jacoco:org.jacoco.build', 'io.antmedia:ant-media-server', 'apache_sling-org-apache-sling-scripting-jsp', 'ru.r2cloud:jradio']
     
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collProjectAnalyses = connection[DB_NAME][COLLECTION_PROJECTS_ANALYSES]

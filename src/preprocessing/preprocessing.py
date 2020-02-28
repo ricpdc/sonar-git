@@ -8,6 +8,7 @@ import csv
 import json
 import pymongo
 import statistics as stats
+import math
 from pymongo import MongoClient
 from objdict import ObjDict
 import datetime
@@ -26,20 +27,24 @@ COLLECTION_ISSUES = 'issues'
 COLLECTION_PROJECTS_ANALYSES = "analyses"
 
 
-def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics):
+def round_up(n, decimals=0):
+    multiplier = 10 ** decimals
+    return math.ceil(n * multiplier) / multiplier
+
+def dataToCsv(csvWriter, projectGitHub, projectSonar, version, date1, date2, lastdate, metrics):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collCommits = connection[DB_NAME][COLLECTION_COMMITS]
     collMeasures = connection[DB_NAME][COLLECTION_METRICS]
     
-    # print('> {} and <= {} : {}'.format(date1, date2, version))
-    commitsVersion = collCommits.find({"projectId": projectId, 'commit.committer.date':{'$gt':date1, '$lte':date2}})
+    print('> {} and <= {} : {}'.format(date1, date2, version))
+    commitsVersion = collCommits.find({"projectId": projectGitHub, 'commit.committer.date':{'$gt':date1, '$lte':date2}})
     commitsVersion = list(commitsVersion)
-    commitsAccumulated = collCommits.find({"projectId": projectId, 'commit.committer.date':{'$gt':lastdate, '$lt':date2}})
+    commitsAccumulated = collCommits.find({"projectId": projectGitHub, 'commit.committer.date':{'$gt':lastdate, '$lt':date2}})
     commitsAccumulated = list(commitsAccumulated)
-    # print('version: {}, accumulated: {}'.format(len(list(commitsVersion)), len(list(commitsAccumulated))))
+    print('version: {}, accumulated: {}'.format(len(list(commitsVersion)), len(list(commitsAccumulated))))
     
     pipeline = [
-    {"$match":  {"projectId": projectId, 'commit.committer.date': {'$gt':date1, '$lte':date2}}},
+    {"$match":  {"projectId": projectGitHub, 'commit.committer.date': {'$gt':date1, '$lte':date2}}},
     {"$group": { '_id': "$commit.author.name", 'count': { '$sum': 1 } } }]
     commiters = collCommits.aggregate(pipeline)
     commiters = list(commiters);
@@ -47,10 +52,11 @@ def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics):
     percentageCommiters = []
     for c in commiters:
         percentageCommiters.append(c['count'] / len(commitsVersion))
-    print(len(percentageCommiters))
+    #print(len(percentageCommiters))
     harmonicMeanCommiters = 0
     if len(percentageCommiters) != 0:
         harmonicMeanCommiters = stats.harmonic_mean(percentageCommiters)
+        harmonicMeanCommiters = round_up(harmonicMeanCommiters, 4)
     
 #     print(len(commiters))
 #     print(str(commiters).encode('utf-8'))
@@ -66,15 +72,15 @@ def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics):
         for f in list(c['files']):
             files.add(f['filename'])
     
-    csvRow = [projectId, version, date1, date2, len(commitsVersion), len(commitsAccumulated), len(commiters), str(harmonicMeanCommiters), changes, additions, deletions, len(files)]
+    csvRow = [projectGitHub, version, date1, date2, len(commitsVersion), len(commitsAccumulated), len(commiters), str(harmonicMeanCommiters), changes, additions, deletions, len(files)]
     
     for metric in metrics:
-        measures = collMeasures.find({'projectId' : projectId, 'metric': metric }, {'metric': 1, '_id' : 0, 'history': {'$elemMatch': {'date': date2} }})
+        measures = collMeasures.find({'projectId' : projectSonar, 'metric': metric }, {'metric': 1, '_id' : 0, 'history': {'$elemMatch': {'date': date2} }})
         value = 0;
         if 'value' in measures[0]['history'][0]:
             value = measures[0]['history'][0]['value']
         name = measures[0]['metric']
-        print('' + str(projectId) + ' - ' + str(version) + ' - ' + str(date2) + ' - ' + name + ': ' + str(value))
+        #print('' + str(projectSonar) + ' - ' + str(version) + ' - ' + str(date2) + ' - ' + name + ': ' + str(value))
         csvRow.append(value)
     
     csvWriter.writerow(csvRow)
@@ -83,8 +89,8 @@ def dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics):
 #         print(str(commit).encode('utf-8'))
 
 
-def preprocess(projectId, csvWriter):
-    analysisDates = getAnalysisDates(projectId);
+def preprocess(projectGitHub, projectSonar, csvWriter):
+    analysisDates = getAnalysisDates(projectSonar);
     # print(analysisDates)
     metrics = getAllMetricsKeys()
 
@@ -95,20 +101,20 @@ def preprocess(projectId, csvWriter):
     for i in range(1, len(analysisDates)):
         date2 = date1;
         date1 = analysisDates[i]['date']
-        version = analysisDates[i - 1]['events'][0]['name']
-        dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics)
+        version = analysisDates[i - 1]['projectVersion']
+        dataToCsv(csvWriter, projectGitHub, projectSonar, version, date1, date2, lastdate, metrics)
     
-    version = analysisDates[len(analysisDates) - 1]['events'][0]['name']
-    date2 = date1
-    date1 = (datetime.datetime.now() - relativedelta(years=10)).isoformat()
-    dataToCsv(csvWriter, projectId, version, date1, date2, lastdate, metrics)
+#     version = analysisDates[len(analysisDates) - 1]['projectVersion']
+#     date2 = date1
+#     date1 = (datetime.datetime.now() - relativedelta(years=10)).isoformat()
+#     dataToCsv(csvWriter, projectGitHub, projectSonar, version, date1, date2, lastdate, metrics)
     
 
 def getAnalysisDates(projectId):
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collAnalyses = connection[DB_NAME][COLLECTION_PROJECTS_ANALYSES]
      
-    analysisDates = collAnalyses.find({"events.category": "VERSION", "projectId": projectId}, {"_id":0, "date": 1, "events.name": 1})
+    analysisDates = collAnalyses.find({"events.category": "VERSION", "projectId": projectId}, {"_id":0, "date": 1, "projectVersion": 1})
 #     print(list(analysisDates))
 #     for a in analysisDates:
 #         print(a)
@@ -116,7 +122,8 @@ def getAnalysisDates(projectId):
 
 
 def main():
-    projects = ['monica', 'simgrid_simgrid']
+    projects = [['monica', 'monica'], ['simgrid', 'simgrid_simgrid'], ['sonarqube', 'org.sonarsource.sonarqube:sonarqube'], ['jmeter', 'JMeter'], ['jacoco', 'org.jacoco:org.jacoco.build'], ['Ant-Media-Server', 'io.antmedia:ant-media-server'], ['sling-org-apache-sling-scripting-jsp', 'apache_sling-org-apache-sling-scripting-jsp'], ['jradio', 'ru.r2cloud:jradio']]
+    
     
     with open('sonar-git.csv', mode='w', newline='') as csvFile:
         csvWriter = csv.writer(csvFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -129,7 +136,7 @@ def main():
         csvWriter.writerow(headerFields)            
         
         for project in projects:
-            preprocess(project, csvWriter)
+            preprocess(project[0], project[1], csvWriter)
 
 
 main()
