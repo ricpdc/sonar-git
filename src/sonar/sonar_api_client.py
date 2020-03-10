@@ -155,17 +155,20 @@ def getProjectAnalyses(projectName):
 
 def main ():
     #getAllMetricsKeys()
-    sonarProjects = ['monica', 'simgrid_simgrid', 'org.sonarsource.sonarqube:sonarqube', 'JMeter', 'org.jacoco:org.jacoco.build', 'io.antmedia:ant-media-server', 'apache_sling-org-apache-sling-scripting-jsp', 'ru.r2cloud:jradio']
+#     sonarProjects = ['monica', 'simgrid_simgrid', 'org.sonarsource.sonarqube:sonarqube', 'JMeter', 'org.jacoco:org.jacoco.build', 'io.antmedia:ant-media-server', 'apache_sling-org-apache-sling-scripting-jsp', 'ru.r2cloud:jradio']
     
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collProjectAnalyses = connection[DB_NAME][COLLECTION_PROJECTS_ANALYSES]
-    collProjectAnalyses.drop();
     collProject = connection[DB_NAME][COLLECTION_PROJECTS]
-    collProject.drop();
     collMetrics = connection[DB_NAME][COLLECTION_METRICS]
-    collMetrics.drop();
     collIssues = connection[DB_NAME][COLLECTION_ISSUES]
-    collIssues.drop();
+#     collProjectAnalyses.drop();
+#     collProject.drop();
+#     collMetrics.drop();
+#     collIssues.drop();
+
+
+    sonarProjects = ['sonaranalyzer-dotnet', 'eu.europa.ec.joinup.sd-dss:sd-dss', 'apache_sling-org-apache-sling-scripting-sightly-compiler', 'apache_sling-org-apache-sling-app-cms','fish.payara.server:payara-aggregator']
     
     for project in sonarProjects:
         getProjectAnalyses(project)

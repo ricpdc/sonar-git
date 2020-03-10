@@ -62,7 +62,10 @@ def importCommits(user, project):
                 if 'sha' in commit:
                     sha=commit['sha']
                 else:
-                    print('\n\nError:\n' + str(commit).encode('utf-8'))
+                    print('\n\nError commit without sha. Commits Dict: ' + str(commits_dict))
+                    if commit is not None:
+                        print(str(commit).encode('utf-8'))
+                    continue
                 #print('\n'+sha)
                 url_info = commit_info_url.format(user, project, str(sha))
                 #print(url_info)
@@ -78,7 +81,7 @@ def importCommits(user, project):
                 #print(str(commit).encode('utf-8'))
                 collCommits.insert_one(commit)
                 #print (str(commit).encode('utf-8'))
-                time.sleep(0.5)
+                time.sleep(0.2)
                 
         else:
             hasMorePages = False
@@ -101,14 +104,18 @@ def main():
     
     checkRateLimit();
     
-    githubProjects = [['monicahq', 'monica'], ['simgrid', 'simgrid'], ['SonarSource', 'sonarqube'], ['apache', 'jmeter'], ['jacoco', 'jacoco'], ['ant-media', 'Ant-Media-Server'], ['apache', 'sling-org-apache-sling-scripting-jsp'], ['dernasherbrezon', 'jradio']]
+#     githubProjects = [['monicahq', 'monica'], ['simgrid', 'simgrid'], ['SonarSource', 'sonarqube'], ['apache', 'jmeter'], ['jacoco', 'jacoco'], ['ant-media', 'Ant-Media-Server'], ['apache', 'sling-org-apache-sling-scripting-jsp'], ['dernasherbrezon', 'jradio']]
     connection = MongoClient(MONGODB_HOST, MONGODB_PORT)
     collRepos = connection[DB_NAME][COLLECTION_REPOS]
     collCommits = connection[DB_NAME][COLLECTION_COMMITS]
     collCommitsInfo = connection[DB_NAME][COLLECTION_COMMITS_INFO]
-    collRepos.drop();
-    collCommits.drop();
-    collCommitsInfo.drop();
+#     collRepos.drop();
+#     collCommits.drop();
+#     collCommitsInfo.drop();
+#     
+    
+    #['SonarSource', 'sonar-dotnet'], 
+    githubProjects = [['esig', 'dss'], ['apache', 'sling-org-apache-sling-scripting-sightly-compiler'], ['apache', 'sling-org-apache-sling-app-cms'], ['payara', 'Payara']]
     
     for project in githubProjects:
         importCommits(project[0], project[1])

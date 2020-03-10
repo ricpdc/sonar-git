@@ -13,6 +13,7 @@ from pymongo import MongoClient
 from objdict import ObjDict
 import datetime
 from dateutil.relativedelta import relativedelta
+import dateutil.parser
 import sys
 sys.path.append("../sonar")
 from sonar_api_client import getAllMetricsKeys 
@@ -36,9 +37,14 @@ def dataToCsv(csvWriter, projectGitHub, projectSonar, version, date1, date2, las
     collCommits = connection[DB_NAME][COLLECTION_COMMITS]
     collMeasures = connection[DB_NAME][COLLECTION_METRICS]
     
-    print('> {} and <= {} : {}'.format(date1, date2, version))
+    print('> {} and <= {} : {} {}'.format(date1, date2, projectGitHub, version))
     commitsVersion = collCommits.find({"projectId": projectGitHub, 'commit.committer.date':{'$gt':date1, '$lte':date2}})
     commitsVersion = list(commitsVersion)
+    
+    versionDays = abs(dateutil.parser.isoparse(date2) - dateutil.parser.isoparse(date1)).days + 1
+    commitsPerDay = len(commitsVersion)/versionDays
+    commitsPerDay = round_up(commitsPerDay, 4)
+    
     commitsAccumulated = collCommits.find({"projectId": projectGitHub, 'commit.committer.date':{'$gt':lastdate, '$lt':date2}})
     commitsAccumulated = list(commitsAccumulated)
     print('version: {}, accumulated: {}'.format(len(list(commitsVersion)), len(list(commitsAccumulated))))
@@ -72,15 +78,17 @@ def dataToCsv(csvWriter, projectGitHub, projectSonar, version, date1, date2, las
         for f in list(c['files']):
             files.add(f['filename'])
     
-    csvRow = [projectGitHub, version, date1, date2, len(commitsVersion), len(commitsAccumulated), len(commiters), str(harmonicMeanCommiters), changes, additions, deletions, len(files)]
+    changesByCommit = 0
+    if len(commitsVersion) != 0:
+        changesByCommit = round_up(changes / len(commitsVersion), 4)
+    
+    csvRow = [projectGitHub, version, date1, date2, versionDays, len(commitsVersion), commitsPerDay, len(commitsAccumulated), len(commiters), str(harmonicMeanCommiters), changes, changesByCommit, additions, deletions, len(files)]
     
     for metric in metrics:
         measures = collMeasures.find({'projectId' : projectSonar, 'metric': metric }, {'metric': 1, '_id' : 0, 'history': {'$elemMatch': {'date': date2} }})
         value = 0;
-        if 'value' in measures[0]['history'][0]:
+        if measures.count() > 0 and measures[0] is not None and 'history' in measures[0] and 'value' in measures[0]['history'][0]:
             value = measures[0]['history'][0]['value']
-        name = measures[0]['metric']
-        #print('' + str(projectSonar) + ' - ' + str(version) + ' - ' + str(date2) + ' - ' + name + ': ' + str(value))
         csvRow.append(value)
     
     csvWriter.writerow(csvRow)
@@ -122,13 +130,17 @@ def getAnalysisDates(projectId):
 
 
 def main():
-    projects = [['monica', 'monica'], ['simgrid', 'simgrid_simgrid'], ['sonarqube', 'org.sonarsource.sonarqube:sonarqube'], ['jmeter', 'JMeter'], ['jacoco', 'org.jacoco:org.jacoco.build'], ['Ant-Media-Server', 'io.antmedia:ant-media-server'], ['sling-org-apache-sling-scripting-jsp', 'apache_sling-org-apache-sling-scripting-jsp'], ['jradio', 'ru.r2cloud:jradio']]
+    projects = [['monica', 'monica'], ['simgrid', 'simgrid_simgrid'], ['sonarqube', 'org.sonarsource.sonarqube:sonarqube'], ['jmeter', 'JMeter'], 
+                ['jacoco', 'org.jacoco:org.jacoco.build'], ['Ant-Media-Server', 'io.antmedia:ant-media-server'], ['jradio', 'ru.r2cloud:jradio'],
+                ['sonar-dotnet', 'sonaranalyzer-dotnet'], ['dss', 'eu.europa.ec.joinup.sd-dss:sd-dss'], ['sling-org-apache-sling-scripting-sightly-compiler', 'apache_sling-org-apache-sling-scripting-sightly-compiler'],
+                ['sling-org-apache-sling-app-cms', 'apache_sling-org-apache-sling-app-cms'], ['Payara', 'fish.payara.server:payara-aggregator']]
+                
     
     
     with open('sonar-git.csv', mode='w', newline='') as csvFile:
-        csvWriter = csv.writer(csvFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csvWriter = csv.writer(csvFile, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         metrics = getAllMetricsKeys()
-        headerFields = ['project', 'version', 'from', 'to', 'commits', 'accumulated_commits', 'committers', 'committers_weigth', 'changes', 'additions', 'deletions', 'changed_files']
+        headerFields = ['project', 'version', 'from', 'to', 'days', 'commits', 'commitsPerDay', 'accumulated_commits', 'committers', 'committers_weigth', 'changes', 'changesByCommit', 'additions', 'deletions', 'changed_files']
         
         for m in metrics:
             headerFields.append(m)
