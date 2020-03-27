@@ -133,7 +133,8 @@ def main():
     projects = [['monica', 'monica'], ['simgrid', 'simgrid_simgrid'], ['sonarqube', 'org.sonarsource.sonarqube:sonarqube'], ['jmeter', 'JMeter'], 
                 ['jacoco', 'org.jacoco:org.jacoco.build'], ['Ant-Media-Server', 'io.antmedia:ant-media-server'], ['jradio', 'ru.r2cloud:jradio'],
                 ['sonar-dotnet', 'sonaranalyzer-dotnet'], ['dss', 'eu.europa.ec.joinup.sd-dss:sd-dss'], ['sling-org-apache-sling-scripting-sightly-compiler', 'apache_sling-org-apache-sling-scripting-sightly-compiler'],
-                ['sling-org-apache-sling-app-cms', 'apache_sling-org-apache-sling-app-cms'], ['Payara', 'fish.payara.server:payara-aggregator']]
+                ['sling-org-apache-sling-app-cms', 'apache_sling-org-apache-sling-app-cms'], ['Payara', 'fish.payara.server:payara-aggregator'],
+                ['sling-org-apache-sling-scripting-jsp', 'apache_sling-org-apache-sling-scripting-jsp']]
                 
     
     
