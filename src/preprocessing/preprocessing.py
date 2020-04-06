@@ -139,9 +139,9 @@ def main():
     
     
     with open('sonar-git.csv', mode='w', newline='') as csvFile:
-        csvWriter = csv.writer(csvFile, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csvWriter = csv.writer(csvFile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         metrics = getAllMetricsKeys()
-        headerFields = ['project', 'version', 'from', 'to', 'days', 'commits', 'commitsPerDay', 'accumulated_commits', 'committers', 'committers_weigth', 'changes', 'changesByCommit', 'additions', 'deletions', 'changed_files']
+        headerFields = ['project', 'version', 'from', 'to', 'days', 'commits', 'commitsPerDay', 'accumulated_commits', 'committers', 'committers_weight', 'changes', 'changes_by_commit', 'additions', 'deletions', 'changed_files']
         
         for m in metrics:
             headerFields.append(m)

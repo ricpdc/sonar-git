@@ -16,7 +16,7 @@ The result of the preprocessing has been stored in a CSV file. The first step is
 
 ```{r, echo=TRUE}
 library(readr)
-sonar_git <- read_delim("../data/sonar-git.csv", ";", quote = "\\\"", escape_double = FALSE, locale = locale(), trim_ws = TRUE)
+sonar_git <- read_csv("../data/sonar-git.csv")
 
 ```
 
@@ -25,23 +25,39 @@ Then, we filter our the matrix (with 107 variables) to manage those interesting 
 
 ```{r sonar_git, echo=TRUE}
 library(dplyr)
-dataset1<-select(sonar_git, 
+dataset0<-select(sonar_git, 
                   project,
                   version,
                   commits,
-                  changes_by_commit,
                   committers,
+                  changes_by_commit,
                   committers_weight,
                   bugs,
                   code_smells,
                   complexity,
                   violations,
-                  duplicated_blocks,
-                  open_issues)
+                  duplicated_lines,
+                  open_issues,
+                  lines)
+
+#Filter missing values 
+dataset0 <- dataset0[-c(133:190, 172, 173, 195:205, 212:228, 233:245, 249:256), ]
+
+dataset1 <- dataset0
+dataset1 <- within(dataset1, commits <- commits/(lines/1000))
+dataset1 <- within(dataset1, committers <- committers/(lines/1000))
+dataset1 <- within(dataset1, commits <- commits/(lines/1000))
+dataset1 <- within(dataset1, bugs <- bugs/(lines/1000))
+dataset1 <- within(dataset1, code_smells <- code_smells/(lines/1000))
+dataset1 <- within(dataset1, violations <- violations/(lines/1000))
+dataset1 <- within(dataset1, duplicated_lines <- duplicated_lines/(lines/1000))
+dataset1 <- within(dataset1, open_issues <- open_issues/(lines/1000))
+
+dataset1 <- dataset1[, 1:12]
+
 
 
 summary(dataset1)
-
 
 ```
 
@@ -71,15 +87,14 @@ sp <- ggplot(dataset1, aes(x=commits, y=committers)) +
 
 sp + theme_classic()
 
-zoom_sp <- sp + coord_cartesian(xlim = c(0, 120), ylim = c(0, 10))
+zoom_sp <- sp + coord_cartesian(xlim = c(0, 2), ylim = c(0, 0.2))
 zoom_sp + theme_classic()
 
 
 kd <- with(dataset1, MASS::kde2d(committers, commits, n = 50))
 fig <- plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface()
- 
-fig
 
+fig
 
 ```
 
@@ -105,7 +120,7 @@ corrplot(M, method = "circle")
 corrplot(M, method = "ellipse")
 corrplot(M, method = "number")
 
-col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#AADD77", "#77AA44"))
+col <- colorRampPalette(c("#77AA44", "#AADD77", "#FFFFFF", "#EE9988", "#BB4444"))
 res1 <- cor.mtest(dataset_only_data, conf.level = .95)
 corrplot(M, method = "color", col = col(200),
           type = "upper", order = "original", number.cex = .8,
@@ -128,38 +143,40 @@ library(ggplot2)
 library(ggpubr)
 
 
-monica<-dataset1[(dataset1[,'project']=='monica'), 1:12]
-sp <- ggplot(monica, aes(x=commits, y=complexity)) + 
- geom_point(shape=16, aes(colour=project))+
- geom_smooth(method=lm,  linetype="dashed",
-            color="darkred", fill="grey") +
-coord_cartesian(xlim = c(0, 255), ylim = c(1500, 4300))
-sp + stat_cor(method = "pearson", label.x = 160, label.y = 4300)
-
-
-sonar_dotnet<-dataset1[(dataset1[,'project']=='sonar-dotnet'), 1:12]
-sp <- ggplot(sonar_dotnet, aes(x=committers, y=duplicated_blocks)) + 
- geom_point(shape=16, aes(colour=project))+
- geom_smooth(method=lm,  linetype="dashed",
-          color="darkred", fill="grey") +
- coord_cartesian(xlim = c(0, 15), ylim = c(35, 90))
-sp + stat_cor(method = "pearson", label.x = 8, label.y = 75)
-
 sonarqube<-dataset1[(dataset1[,'project']=='sonarqube'), 1:12]
-sp <- ggplot(sonarqube, aes(x=committers, y=bugs)) + 
- geom_point(shape=16, aes(colour=project))+
- geom_smooth(method=lm,  linetype="dashed",
-          color="darkred", fill="grey") +
-coord_cartesian(xlim = c(0, 31), ylim = c(48, 64))
-sp + stat_cor(method = "pearson", label.x = 12, label.y =58)
+sp <- ggplot(sonarqube, aes(x=commits, y=bugs)) + 
+    geom_point(shape=16, aes(colour=project)) +
+    geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey") +
+    theme(legend.position = "bottom") +
+    stat_cor(method = "pearson")
+sp
 
 
 jacoco<-dataset1[(dataset1[,'project']=='jacoco'), 1:12]
-sp <- ggplot(jacoco, aes(x=committers, y=code_smells)) + 
- geom_point(shape=16, aes(colour=project))+
- geom_smooth(method=lm,  linetype="dashed",
-          color="darkred", fill="grey")
-sp + stat_cor(method = "pearson", label.x = 3, label.y =230)
+sp <- ggplot(jacoco, aes(x=commits, y=code_smells)) + 
+   geom_point(shape=16, aes(colour=project)) +
+   geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey") + 
+   stat_cor(method = "pearson") + 
+   theme(legend.position = "bottom") 
+sp
+
+
+monica<-dataset1[(dataset1[,'project']=='monica'), 1:12]
+sp <- ggplot(monica, aes(x=changes_by_commit, y=code_smells)) + 
+      geom_point(shape=16, aes(colour=project))+
+      geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey") + 
+      stat_cor(method = "pearson") +
+      theme(legend.position = "bottom")
+sp
+
+
+ant<-dataset1[(dataset1[,'project']=='Ant-Media-Server'), 1:12]
+sp <- ggplot(ant, aes(x=committers, y=complexity)) + 
+    geom_point(shape=16, aes(colour=project)) +
+    geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey") +
+    stat_cor(method = "pearson") +
+    theme(legend.position = "bottom") 
+sp
 
 
 
@@ -178,7 +195,7 @@ sp <- ggplot(dataset1, aes(x=commits, y=complexity)) +
               color="darkred", fill="grey")
 sp
 
-zoom_sp <- sp + coord_cartesian(xlim = c(0, 500), ylim = c(0, 20000))
+zoom_sp <- sp + coord_cartesian(xlim = c(0, 0.2), ylim = c(-20000, 20000))
 zoom_sp
 
 
@@ -197,7 +214,7 @@ committers_density <- ggplot(dataset1, aes(x=committers, fill=project)) +
    theme(legend.position = "right")
 committers_density
 
-zoom_sp <- committers_density + coord_cartesian(xlim = c(0, 10), ylim = c(0, 0.75))
+zoom_sp <- committers_density + coord_cartesian(xlim = c(0, 0.10), ylim = c(0, 75))
 zoom_sp
 
 
@@ -209,7 +226,7 @@ commits_density <- ggplot(dataset1, aes(x=commits, fill=project)) +
    theme(legend.position = "right")
 commits_density
 
-zoom_sp <- commits_density + coord_cartesian(xlim = c(0, 150), ylim = c(0, 0.025))
+zoom_sp <- commits_density + coord_cartesian(xlim = c(0, 0.3), ylim = c(0, 10))
 zoom_sp
 
 ```
@@ -230,12 +247,6 @@ dataset_clusters <- dataset_only_data
 dataset_clusters$cluster <- factor(clusters)
 
 
-sp <- ggplot(dataset_clusters, aes(x=commits, y=complexity)) + 
-   geom_point(shape=16, aes(colour=cluster))+
-   geom_smooth(method=lm,  linetype="dashed",
-              color="darkred", fill="grey")
-
-sp
 
 ```
 
@@ -263,14 +274,16 @@ plot(1:10, wss, type="b", xlab="Number of Clusters",
 zdata1 <- scale(dataset_only_data)
 kcdata1 <- kmeans(x = zdata1, centers = 4)
 kcdata1$cluster
+
+
+clusplot(zdata1, kcdata1$cluster, color = TRUE, shade = TRUE, 
+         labels = 2, lines = 0)
+
+
 dataset_clusters$cluster2 <- factor(kcdata1$cluster)
 
-
-sp <- ggplot(dataset_clusters, aes(x=commits, y=complexity, colour=cluster2, shape=cluster2)) + 
-    geom_point(shape=16, aes(colour=cluster2))+
-    geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey")
-
-sp
+dataset1_cluster <- dataset1
+dataset1_cluster$cluster <- factor(kcdata1$cluster)
 
 
 ```
@@ -294,6 +307,7 @@ x2 <- dataset_clusters$code_smells[dataset_clusters$cluster2==2]
 x3 <- dataset_clusters$code_smells[dataset_clusters$cluster2==3]
 x4 <- dataset_clusters$code_smells[dataset_clusters$cluster2==4]
 
+# vioplot(x1, x2, x3, names=c("1", "2", "3"), col="grey")
 vioplot(x1, x2, x3, x4, names=c("1", "2", "3", "4"), col="grey")
 
 title("Code smells per cluster")
@@ -303,7 +317,10 @@ x1 <- dataset_clusters$commits[dataset_clusters$cluster2==1]
 x2 <- dataset_clusters$commits[dataset_clusters$cluster2==2]
 x3 <- dataset_clusters$commits[dataset_clusters$cluster2==3]
 x4 <- dataset_clusters$commits[dataset_clusters$cluster2==4]
+
+# vioplot(x1, x2, x3, names=c("1", "2", "3"), col="grey")
 vioplot(x1, x2, x3, x4, names=c("1", "2", "3", "4"), col="grey")
+
 title("Commits per cluster")
 
 
@@ -312,6 +329,7 @@ title("Commits per cluster")
 We compute correlation and scatter plots for clusters
 
 ``` {r, error=TRUE}
+library(corrplot)
 
 c1<-dataset_clusters[(dataset_clusters[,'cluster2']=='1'), 1:10]
 c2<-dataset_clusters[(dataset_clusters[,'cluster2']=='2'), 1:10]
@@ -324,7 +342,7 @@ corrplot(cor(c3), method="number")
 corrplot(cor(c4), method="number")
 
 
-col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#AADD77", "#77AA44"))
+col <- colorRampPalette(c("#77AA44", "#AADD77", "#FFFFFF", "#EE9988", "#BB4444"))
 
 res1 <- cor.mtest(c1, conf.level = .95)
 corrplot(cor(c1), method = "color", col = col(200),
@@ -351,9 +369,26 @@ corrplot(cor(c4), method = "color", col = col(200),
    p.mat = res1$p, sig.level = 0.05, insig = "blank", diag = FALSE)
 
 
-sp <- ggplot(dataset_clusters, aes(x=commits, y=complexity, colour=cluster2, shape=cluster2)) + 
-    geom_point()+
-    geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey")
+sp <- ggplot(dataset1_cluster, aes(x=commits, y=code_smells, colour=cluster, shape=cluster)) + 
+  geom_point()+
+ geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey")+
+   coord_cartesian(xlim = c(0, 0.25), ylim = c(0, 45))
+sp
+
+sp <- ggplot(dataset1_cluster, aes(x=committers, y=code_smells, colour=cluster, shape=cluster)) + 
+  geom_point()+
+ geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey") +
+   coord_cartesian(xlim = c(0, 0.3), ylim = c(0, 50))
+sp
+
+sp <- ggplot(dataset1_cluster, aes(x=commits, y=complexity, colour=cluster, shape=cluster)) + 
+  geom_point()+
+ geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey")
+sp
+
+sp <- ggplot(dataset1_cluster, aes(x=committers, y=complexity, colour=cluster, shape=cluster)) + 
+  geom_point()+
+ geom_smooth(method=lm,  linetype="dashed", color="darkred", fill="grey")
 sp
 
 
@@ -364,13 +399,16 @@ sp
 Some 3d plots with correlations of several measures by cluster
 
 ``` {r, eval=FALSE, echo=FALSE}
-
+library(plotly)
 
 c1<-dataset_clusters[(dataset_clusters[,'cluster2']=='1'), 1:10]
 c2<-dataset_clusters[(dataset_clusters[,'cluster2']=='2'), 1:10]
 c3<-dataset_clusters[(dataset_clusters[,'cluster2']=='3'), 1:10]
 c4<-dataset_clusters[(dataset_clusters[,'cluster2']=='4'), 1:10]
 
+kd <- with(c1, MASS::kde2d(committers, code_smells, n = 50))
+fig <- plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface()
+fig
 
 kd <- with(c2, MASS::kde2d(committers, code_smells, n = 50))
 fig <- plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface()
@@ -415,35 +453,51 @@ library(ggplot2)
 library(ggpubr)
 theme_set(theme_minimal())
 
-dataset_clusters
-
-clusters<-dataset_clusters
-clusters$project = dataset1$project
-clusters$version = dataset1$version
-sonar<-clusters[(clusters[,'project']=='sonarqube'), 1:14]
+dataset1_cluster
 
 
-p_bugs<-ggplot(dat =sonar, aes(x=version, y=bugs)) + 
+ant<-dataset1_cluster[(dataset1_cluster[,'project']=='Ant-Media-Server'), 1:13]
+
+
+p_code_smells<-ggplot(dat = ant, aes(x=version, y=code_smells)) + 
    geom_line(aes(group=1)) + 
-   geom_point(aes(colour=cluster2, shape=cluster2, group=cluster2), size=3)
+   geom_point(aes(colour=cluster, shape=cluster, group=cluster), size=3)+
+   theme(axis.text.x=element_blank())
+p_code_smells
+
+
+p_bugs<-ggplot(dat = ant, aes(x=version, y=bugs)) + 
+   geom_line(aes(group=1)) + 
+   geom_point(aes(colour=cluster, shape=cluster, group=cluster), size=3)+
+   theme(axis.text.x=element_blank())
 p_bugs
 
-p_violations<-ggplot(dat =sonar, aes(x=version, y=violations)) + 
+p_cloning<-ggplot(dat = ant, aes(x=version, y=duplicated_lines)) + 
    geom_line(aes(group=1)) + 
-   geom_point(aes(colour=cluster2, shape=cluster2, group=cluster2), size=3)
+   geom_point(aes(colour=cluster, shape=cluster, group=cluster), size=3)+
+   theme(axis.text.x=element_blank())
+p_cloning
+
+p_violations<-ggplot(dat = ant, aes(x=version, y=violations)) + 
+   geom_line(aes(group=1)) + 
+   geom_point(aes(colour=cluster, shape=cluster, group=cluster), size=3)+
+   theme(axis.text.x=element_blank())
 p_violations
 
-p_commits<-ggplot(dat =sonar, aes(x=version, y=commits)) + 
+p_committers<-ggplot(dat = ant, aes(x=version, y=committers)) + 
    geom_line(aes(group=1)) + 
-   geom_point(aes(colour=cluster2, shape=cluster2, group=cluster2), size=3)
+   geom_point(aes(colour=cluster, shape=cluster, group=cluster), size=3) +
+   theme(axis.text.x=element_blank())
 
-p_commits
+p_committers
 
-figure <- ggarrange(p_bugs, p_violations, p_commits, labels = c("a", "b", "c"), ncol = 1, nrow = 3)
+figure <- ggarrange(p_code_smells, p_cloning, p_committers, labels = c("a", "b", "c"), ncol = 1, nrow = 3) +  theme(axis.text.x=element_blank())
 figure
 
 
 ```
+
+
 
 ##k-means for normalized values
 
@@ -452,6 +506,7 @@ we perform the kmeans algorithm with normalized values and euclidean distance
 
 ``` {r}
 library(vegan)
+library(permute)
 
 #data normalization
 spe.norm <- decostand(dataset_only_data, "normalize") 
@@ -461,7 +516,7 @@ spe.ch.ward <- hclust(spe.ch, method = "ward.D")
 plot(spe.ch.ward, sub = "Ward method")
 
 #Calinski method
-spe.KM.cascade <- cascadeKM(spe.norm, inf.gr = 2, sup.gr = 10, iter = 400, criterion = "ssi")
+spe.KM.cascade <- cascadeKM(spe.norm, inf.gr = 2, sup.gr = 10, iter = 1000, criterion = "ssi")
 spe.KM.cascade$results
 plot(spe.KM.cascade, sortg = TRUE)
 
@@ -508,6 +563,7 @@ x2 <- dataset_clusters$code_smells[dataset_clusters$cluster3==2]
 x3 <- dataset_clusters$code_smells[dataset_clusters$cluster3==3]
 x4 <- dataset_clusters$code_smells[dataset_clusters$cluster3==4]
 
+# vioplot(x1, x2, x3, names=c("1", "2", "3"), col="grey")
 vioplot(x1, x2, x3, x4, names=c("1", "2", "3", "4"), col="grey")
 
 title("Code smells per cluster")
@@ -517,7 +573,10 @@ x1 <- dataset_clusters$commits[dataset_clusters$cluster3==1]
 x2 <- dataset_clusters$commits[dataset_clusters$cluster3==2]
 x3 <- dataset_clusters$commits[dataset_clusters$cluster3==3]
 x4 <- dataset_clusters$commits[dataset_clusters$cluster3==4]
+
+# vioplot(x1, x2, x3, names=c("1", "2", "3"), col="grey")
 vioplot(x1, x2, x3, x4, names=c("1", "2", "3", "4"), col="grey")
+
 title("Commits per cluster")
 
 
@@ -538,7 +597,8 @@ corrplot(cor(c3), method="number")
 corrplot(cor(c4), method="number")
 
 
-col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#AADD77", "#77AA44"))
+col <- colorRampPalette(c("#77AA44", "#AADD77", "#FFFFFF", "#EE9988", "#BB4444"))
+
 
 res1 <- cor.mtest(c1, conf.level = .95)
 corrplot(cor(c1), method = "color", col = col(200),
@@ -585,6 +645,9 @@ c2<-dataset_clusters[(dataset_clusters[,'cluster3']=='2'), 1:10]
 c3<-dataset_clusters[(dataset_clusters[,'cluster3']=='3'), 1:10]
 c4<-dataset_clusters[(dataset_clusters[,'cluster3']=='4'), 1:10]
 
+kd <- with(c1, MASS::kde2d(committers, code_smells, n = 50))
+fig <- plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface()
+fig
 
 kd <- with(c2, MASS::kde2d(committers, code_smells, n = 50))
 fig <- plot_ly(x = kd$x, y = kd$y, z = kd$z) %>% add_surface()
